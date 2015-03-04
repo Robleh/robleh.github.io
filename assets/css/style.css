@@ -1,6 +1,6 @@
 @font-face {
   font-family:"Big_Noodle_Titling";
-  src:url("Big_Noodle_Titling.ttf");
+  src:url("Big_Noodle_Titling.ttf") format('truetype');
 }
 .noodle-font {
 	font-family: "Big_Noodle_Titling";
