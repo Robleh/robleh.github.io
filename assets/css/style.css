@@ -108,7 +108,53 @@ video#bgvid {
 	height: 125px;
 	width: auto;
 }
-.skills {
-	margin-top: 37px;
+.skills > ul {
+	margin-top: 47px;
 	margin-bottom: 37px;
+	margin-left: 100px;
+	list-style-type: none;
+	text-align: center;
+}
+.skills > ul > li {
+	box-shadow: 10px 10px 5px rgba(0,0,0,0.7);
+	margin-bottom: 10px;
+	border-radius: 25px;
+}
+#skill-container p {
+	margin-top: 18px;
+	display: inline-block;
+	vertical-align: middle;
+}
+#skill-container {
+	width: 100%;
+}
+#python {
+	background: #FFFF66;
+	width: 80%;
+	height: 60px;
+	border-radius: 25px;
+}
+#html {
+	background: #FF70DB;
+	width: 70%;
+	height: 60px;
+	border-radius: 25px;
+}
+#js {
+	background: #A3FFA3;
+	width: 45%;
+	height: 60px;
+	border-radius: 25px;
+}
+#php {
+	background: #99CCFF;
+	width: 60%;
+	height: 60px;
+	border-radius: 25px;
+}
+#c {
+	background: #FF944D;
+	width: 33%;
+	height: 60px;
+	border-radius: 25px;
 }
