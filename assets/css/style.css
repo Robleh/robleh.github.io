@@ -1,6 +1,6 @@
 @font-face {
   font-family:"Big_Noodle_Titling";
-  src:url("https://roblehesa.com/assets/css/big_noodle_titling.ttf") format('truetype');
+  src:url("roblehesa.com/assets/css/big_noodle_titling.ttf") format('truetype');
 }
 .noodle-font {
 	font-family: "Big_Noodle_Titling";
