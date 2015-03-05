@@ -132,7 +132,7 @@ video#bgvid {
 	height: 60px;
 }
 #python {
-	background: #FFFF66;
+	background: #FF4D4D;
 	width: 80%;
 	height: 60px;
 	border-radius: 25px;
@@ -140,7 +140,7 @@ video#bgvid {
 	display: none;
 }
 #html {
-	background: #FF70DB;
+	background: #FF944D;
 	width: 70%;
 	height: 60px;
 	border-radius: 25px;
@@ -148,7 +148,7 @@ video#bgvid {
 	display: none;
 }
 #js {
-	background: #A3FFA3;
+	background: #FFFF80;
 	width: 45%;
 	height: 60px;
 	border-radius: 25px;
@@ -156,7 +156,7 @@ video#bgvid {
 	display: none;
 }
 #php {
-	background: #99CCFF;
+	background: #FFA366;
 	width: 60%;
 	height: 60px;
 	border-radius: 25px;
@@ -164,7 +164,7 @@ video#bgvid {
 	display: none;
 }
 #c {
-	background: #FF944D;
+	background: #FFFF99;
 	width: 33%;
 	height: 60px;
 	border-radius: 25px;
