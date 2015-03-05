@@ -8,6 +8,7 @@ $(document).ready(function(){
 							$(".fa-chevron-down").rotate({ animateTo:value})
 							$(".about-section").slideToggle();
 							$(".quote").fadeToggle(300);
+							$(".slide-right").delay(300).show(1200);
 					}
 			 } 	 
 	});

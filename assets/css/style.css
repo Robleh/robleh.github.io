@@ -83,7 +83,7 @@ video#bgvid {
 }
 .about-section {
 	display:none;
-	background: rgba(18,18,18,0.99);
+	background: rgba(18,18,18,0.95);
 	box-shadow: 10px 10px 5px rgba(0,0,0,0.7);
 	margin-right:5%;
 	margin-left: 5%;
@@ -116,7 +116,6 @@ video#bgvid {
 	text-align: center;
 }
 .skills > ul > li {
-	box-shadow: 10px 10px 5px rgba(0,0,0,0.7);
 	margin-bottom: 10px;
 	border-radius: 25px;
 }
@@ -127,34 +126,48 @@ video#bgvid {
 }
 #skill-container {
 	width: 100%;
+	background: #222222;
+	border-radius: 25px;
+	border: 1px solid #000000;
+	height: 60px;
 }
 #python {
 	background: #FFFF66;
 	width: 80%;
 	height: 60px;
 	border-radius: 25px;
+	box-shadow: 10px 10px 5px rgba(0,0,0,0.7);
+	display: none;
 }
 #html {
 	background: #FF70DB;
 	width: 70%;
 	height: 60px;
 	border-radius: 25px;
+	box-shadow: 10px 10px 5px rgba(0,0,0,0.7);
+	display: none;
 }
 #js {
 	background: #A3FFA3;
 	width: 45%;
 	height: 60px;
 	border-radius: 25px;
+	box-shadow: 10px 10px 5px rgba(0,0,0,0.7);
+	display: none;
 }
 #php {
 	background: #99CCFF;
 	width: 60%;
 	height: 60px;
 	border-radius: 25px;
+	box-shadow: 10px 10px 5px rgba(0,0,0,0.7);
+	display: none;
 }
 #c {
 	background: #FF944D;
 	width: 33%;
 	height: 60px;
 	border-radius: 25px;
+	box-shadow: 10px 10px 5px rgba(0,0,0,0.7);
+	display: none;
 }
