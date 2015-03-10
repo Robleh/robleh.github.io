@@ -134,35 +134,35 @@ video#bgvid {
 }
 #python {
 	background: #FF4D4D;
-	width: 80%;
+	width: 60%;
 	height: 60px;
 	border-radius: 25px;
 	display: none;
 }
 #html {
 	background: #FF944D;
-	width: 70%;
+	width: 50%;
 	height: 60px;
 	border-radius: 25px;
 	display: none;
 }
 #js {
 	background: #FFFF80;
-	width: 45%;
+	width: 20%;
 	height: 60px;
 	border-radius: 25px;
 	display: none;
 }
 #php {
 	background: #FFA366;
-	width: 60%;
+	width: 30%;
 	height: 60px;
 	border-radius: 25px;
 	display: none;
 }
 #c {
 	background: #FFFF99;
-	width: 33%;
+	width: 20%;
 	height: 60px;
 	border-radius: 25px;
 	display: none;
